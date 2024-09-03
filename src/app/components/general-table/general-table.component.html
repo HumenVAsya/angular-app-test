@@ -1,0 +1,94 @@
+<div id="table-page" class="mb-4">
+  <h2>Загальна таблиця</h2>
+  <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="mb-3">
+    <div class="row">
+      <div class="col-md-3">
+        <label for="issuanceDate" class="form-label">Дата видачі</label>
+        <input
+          type="date"
+          id="issuanceDate"
+          class="form-control"
+          formControlName="issuanceDate"
+        />
+      </div>
+      <div class="col-md-3">
+        <label for="returnDate" class="form-label"
+          >Фактична дата повернення</label
+        >
+        <input
+          type="date"
+          id="returnDate"
+          class="form-control"
+          formControlName="returnDate"
+        />
+      </div>
+      <div class="col-md-3">
+        <label for="overdueStatus" class="form-label">Статус кредиту</label>
+        <select
+          id="overdueStatus"
+          class="form-select"
+          formControlName="overdueStatus"
+          style="width: 100%"
+        >
+          <option value="">Bci кредити</option>
+          <option value="overdue">Прострочені</option>
+          <option value="notOverdue">He прострочені</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label for="itemsPerPage" class="form-label"
+          >Кількість кредитів на сторінці</label
+        >
+        <select
+          id="itemsPerPage"
+          class="form-select"
+          formControlName="itemsPerPage"
+          (change)="onItemsPerPageChange($event)"
+          style="width: 100%"
+        >
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">
+      Застосувати фільтри
+    </button>
+  </form>
+  <table id="data-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Дата видачі</th>
+        <th>Сума</th>
+        <th>Проценти</th>
+        <th>Дата повернення</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let credit of paginatedData">
+        <td>{{ credit.id }}</td>
+        <td>{{ credit.issuance_date | date }}</td>
+        <td>{{ credit.body | currency }}</td>
+        <td>{{ credit.percent | number : "1.0-2" }}%</td>
+        <td>{{ credit.return_date | date }}</td>
+        <td>{{ credit.actual_return_date ? "Активний" : "Неактивний" }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="pagination-container">
+    <ngb-pagination
+      [collectionSize]="totalItems"
+      [(page)]="currentPage"
+      [maxSize]="10"
+      [rotate]="true"
+      [ellipses]="false"
+      [boundaryLinks]="true"
+      (pageChange)="onPageChange($event)"
+    ></ngb-pagination>
+  </div>
+</div>

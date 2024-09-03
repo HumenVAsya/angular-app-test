@@ -1,0 +1,25 @@
+<div id="metrics-page">
+  <h2>Коротка інформація</h2>
+  <table id="data-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Кількість виданих кредитів</th>
+        <th>Середня сума видачі</th>
+        <th>Загальна сума виданих кредитів</th>
+        <th>Загальна сума нарахованих відсотків</th>
+        <th>Кількість повернених кредитів</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let credit of aggregatedData">
+        <td class="dashed-border">{{ credit.year }}.{{ credit.month }}</td>
+        <td class="dashed-border">{{ credit.issuedCreditsCount }}</td>
+        <td class="dashed-border">{{ credit.averageIssueAmount | number : "1.2-2" }} грн</td>
+        <td class="dashed-border">{{ credit.totalIssuedAmount | number : "1.2-2" }} грн</td>
+        <td class="dashed-border">{{ credit.totalPercent | number : "1.2-2" }} грн</td>
+        <td class="dashed-border">{{ credit.returnedCreditsCount | number }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
