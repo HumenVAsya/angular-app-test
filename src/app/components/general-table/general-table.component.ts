@@ -1,19 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Credit } from '../../types/credit';
 import { CommonModule } from '@angular/common';
 import { CreditService } from '../../services/credit.service';
 import { NgFor } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
+import { Pagination } from '../pagination/pagination.component';
+import { Subscription } from 'rxjs';
+import { CreditFilterService } from '../../services/filter.service';
 
 @Component({
   selector: 'app-general-table',
   standalone: true,
-  imports: [CommonModule, NgFor, ReactiveFormsModule, NgbPaginationModule],
+  imports: [CommonModule, NgFor, ReactiveFormsModule, NgbPaginationModule, Pagination],
   templateUrl: './general-table.component.html',
   styleUrls: ['./general-table.component.scss'],
 })
-export class GeneralTableComponent implements OnInit {
+export class GeneralTableComponent implements OnInit, OnDestroy {
   credits: Credit[] = [];
   filteredCredits: Credit[] = [];
   filterForm: FormGroup;
@@ -21,52 +24,45 @@ export class GeneralTableComponent implements OnInit {
   itemsPerPage = 10;
   currentPage = 1;
   totalItems = 0;
+  private subscription: Subscription = new Subscription();
 
-  constructor(private dataService: CreditService, private fb: FormBuilder) {
-    this.filterForm = this.fb.group({
-      issuanceDate: [''],
-      returnDate: [''],
-      overdueStatus: [''],
-      itemsPerPage: [10]
-    });
+  constructor(
+    private dataService: CreditService,
+    private creditFilterService: CreditFilterService,
+  ) {
+    this.filterForm = this.creditFilterService.getFilterForm();
   }
 
   ngOnInit(): void {
-    this.dataService.getCredits().subscribe((data) => {
-      this.credits = data;
-      this.filteredCredits = data;
-      this.totalItems = data.length;
-      this.updatePaginatedData();
-    });
+    this.subscription.add(
+      this.dataService.getCredits().subscribe((data) => {
+        this.credits = data;
+        this.filteredCredits = data;
+        this.totalItems = data.length;
+        this.updatePaginatedData();
+      })
+    );
 
-    this.filterForm.get('itemsPerPage')?.valueChanges.subscribe(value => {
-      this.itemsPerPage = value;
-      this.updatePaginatedData();
-    });
+    this.subscription.add(
+      this.filterForm.valueChanges.subscribe(() => {
+        this.applyFilters();
+      })
+    );
+
+    this.subscription.add(
+      this.filterForm.get('itemsPerPage')?.valueChanges.subscribe(value => {
+        this.itemsPerPage = value;
+        this.updatePaginatedData();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 
   applyFilters(): void {
-    const { issuanceDate, returnDate, overdueStatus } = this.filterForm.value;
-    const today = new Date();
-
-    this.filteredCredits = this.credits.filter((credit) => {
-      const issuanceDateMatch =
-        !issuanceDate ||
-        new Date(credit.issuance_date) >= new Date(issuanceDate);
-      const returnDateMatch =
-        !returnDate || new Date(credit.return_date) <= new Date(returnDate);
-
-      let overdueMatch = true;
-      if (overdueStatus === 'overdue') {
-        overdueMatch =
-          !credit.actual_return_date && new Date(credit.return_date) < today;
-      } else if (overdueStatus === 'notOverdue') {
-        overdueMatch = credit.actual_return_date !== null;
-      }
-
-      return issuanceDateMatch && returnDateMatch && overdueMatch;
-    });
-
+    this.filteredCredits = this.creditFilterService.applyFilters(this.credits);
     this.totalItems = this.filteredCredits.length;
     this.currentPage = 1;
     this.updatePaginatedData();

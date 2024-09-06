@@ -1,82 +1,52 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, NgFor } from '@angular/common';
 import { CreditService } from '../../services/credit.service';
-import { Credit } from '../../types/credit';
-
-
-interface GroupedCredits {
-  [year: string]: {
-    [month: string]: {
-      total: number;
-      count: number;
-      totalPercent: number;
-      returnedCount?: number;
-    };
-  };
-}
-
-interface AggregatedCredit {
-  year: string;
-  month: string;
-  issuedCreditsCount: number;
-  averageIssueAmount: number;
-  totalIssuedAmount: number;
-  totalPercent: number;
-  returnedCreditsCount: number;
-}
+import { AggregationService } from '../../services/filter-breif.service'; 
+import { Credit, AggregatedCredit, GroupedCredits } from '../../types/credit';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-brief-information',
   standalone: true,
-  imports: [CommonModule, NgFor,],
+  imports: [CommonModule, NgFor],
   templateUrl: './brief-information.component.html',
   styleUrls: ['./brief-information.component.scss'],
 })
-export class BriefInformationComponent implements OnInit {
+export class BriefInformationComponent implements OnInit, OnDestroy {
   credits: Credit[] = [];
   aggregatedData: AggregatedCredit[] = [];
+  private subscription: Subscription = new Subscription();
 
-  constructor(private dataService: CreditService) {}
+  constructor(
+    private dataService: CreditService,
+    private aggregationService: AggregationService
+  ) {}
 
   ngOnInit(): void {
-    this.dataService.getCredits().subscribe((data) => {
-      this.credits = data;
-      this.aggregatedData = this.aggregateCreditData();
-    });
+    const creditsSubscription = this.dataService
+      .getCredits()
+      .subscribe((data) => {
+        this.credits = data;
+        const groupedCredits = this.aggregationService.groupCreditsByYearMonth(this.credits);
+        this.aggregatedData = this.transformGroupedData(groupedCredits);
+        this.sortAggregatedData();
+      });
+
+    this.subscription.add(creditsSubscription);
   }
 
-  aggregateCreditData(): AggregatedCredit[] {
-    const grouped = this.credits.reduce<GroupedCredits>((acc, item) => {
-      if (!item.issuance_date || !item.body || !item.percent) {
-        return acc;
-      }
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
 
-      const date = new Date(item.issuance_date);
-      const year = date.getFullYear().toString();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-
-      if (!acc[year]) {
-        acc[year] = {};
-      }
-
-      if (!acc[year][month]) {
-        acc[year][month] = { total: 0, count: 0, totalPercent: 0 };
-      }
-
-      acc[year][month].count += 1;
-      acc[year][month].total += item.body;
-      acc[year][month].totalPercent += item.percent;
-
-      if (item.actual_return_date) {
-        acc[year][month].returnedCount = (acc[year][month].returnedCount || 0) + 1;
-      }
-
-      return acc;
-    }, {});
-
+  private transformGroupedData(grouped: GroupedCredits): AggregatedCredit[] {
     return Object.keys(grouped).flatMap((year) =>
       Object.keys(grouped[year] || {}).map((month) => {
-        const entry = grouped[year][month] || { total: 0, count: 0, totalPercent: 0 };
+        const entry = grouped[year][month] || {
+          total: 0,
+          count: 0,
+          totalPercent: 0,
+        };
         const issuedCreditsCount = entry.count;
         const averageIssueAmount = entry.count ? entry.total / entry.count : 0;
         const totalIssuedAmount = entry.total;
@@ -94,5 +64,14 @@ export class BriefInformationComponent implements OnInit {
         };
       })
     );
+  }
+
+  private sortAggregatedData(): void {
+    this.aggregatedData.sort((a, b) => {
+      const dateA = new Date(parseInt(a.year), parseInt(a.month) - 1);
+      const dateB = new Date(parseInt(b.year), parseInt(b.month) - 1);
+
+      return dateA.getTime() - dateB.getTime();
+    });
   }
 }

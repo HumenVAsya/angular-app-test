@@ -1,0 +1,11 @@
+<div class="pagination-container">
+  <ngb-pagination
+    [collectionSize]="totalItems"
+    [(page)]="currentPage"
+    [maxSize]="10"
+    [rotate]="true"
+    [ellipses]="false"
+    [boundaryLinks]="true"
+    (pageChange)="onPageChange($event)"
+  ></ngb-pagination>
+</div>
