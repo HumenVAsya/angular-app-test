@@ -62,7 +62,28 @@ export class GeneralTableComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    this.filteredCredits = this.creditFilterService.applyFilters(this.credits);
+    const { issuanceDate, returnDate, overdueStatus } = this.filterForm.value;
+
+    this.filteredCredits = this.credits;
+
+    if (issuanceDate) {
+      this.filteredCredits = this.filteredCredits.filter(credit => 
+        new Date(credit.issuance_date) >= new Date(issuanceDate)
+      );
+    }
+
+    if (returnDate) {
+      this.filteredCredits = this.filteredCredits.filter(credit => 
+        new Date(credit.return_date) <= new Date(returnDate)
+      );
+    }
+
+    if (overdueStatus) {
+      this.filteredCredits = this.filteredCredits.filter(credit => 
+        overdueStatus === 'overdue' ? credit.actual_return_date : !credit.actual_return_date
+      );
+    }
+
     this.totalItems = this.filteredCredits.length;
     this.currentPage = 1;
     this.updatePaginatedData();
